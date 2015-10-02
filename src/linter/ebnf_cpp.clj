@@ -4,17 +4,17 @@
 
  (def lexical-cpp
    (str
-       "identifier =  <' '*> (#'[a-z]+' | #'[A-Z]+') | ( #'[0-9]*' | (#'[a-z]+' | #'[A-Z]+'))*  <' '*> ;
-        literal = integer_literal   |
-                  character_literal |
-                  floating_literal  |
-                  string_literal    |
-                  boolean_literal ;
-        integer_literal = INTEGER ;
-        character_literal = CHARACTER ;
-        floating_literal = FLOATING ;
-        string_literal = STRING ;
-        boolean_literal = TRUE | FALSE ;"))
+     "identifier =  <'\n'*> <' '*>  ( #'[0-9]*' | (#'[a-z]+' | #'[A-Z]+') )* (#'[a-z]+' | #'[A-Z]+' |'_'*)  ( #'[0-9]*' | (#'[a-z]+' | #'[A-Z]+') )*  <'\n'*> <' '*> ;
+      literal = integer_literal   |
+                character_literal |
+                floating_literal  |
+                string_literal    |
+                boolean_literal ;
+      integer_literal = INTEGER ;
+      character_literal = CHARACTER ;
+      floating_literal = FLOATING ;
+      string_literal = STRING ;
+      boolean_literal = TRUE | FALSE ;"))
 
 (def cpp-translation-unit
   (str "translation_unit= declaration_seq?;"))
@@ -30,9 +30,9 @@
         class_or_namespace_name = class_name | namespace_name ;
         postfix_expression =
              primary_expression
-             | postfix_expression '[' expression ']'
-            | postfix_expression '(' expression_list? ')'
-            | simple_type_specifier '(' expression_list? ')'
+             | postfix_expression '[' <' '*> expression <' '*> ']'
+            | postfix_expression '(' <' '*> expression_list? <' '*> ')'
+            | simple_type_specifier '(' <' '*> expression_list? <' '*> ')'
             | postfix_expression '.' TEMPLATE? COLONCOLON? id_expression
                                        | postfix_expression ARROW TEMPLATE? COLONCOLON? id_expression
                                        | postfix_expression '.' pseudo_destructor_name
@@ -64,11 +64,11 @@
 
         unary_operator = '*' | '&' | '+' | '-' | '!' | '~' ;
         new_expression = COLONCOLON? NEW new_placement? new_type_id new_initializer? | COLONCOLON? NEW new_placement? '(' type_id ')' new_initializer? ;
-        new_placement = '(' expression_list ')' ;
+        new_placement =  <' '*> '(' <' '*> expression_list  <' '*> ')' <' '*> ;
         new_type_id = type_specifier_seq new_declarator? ;
         new_declarator = ptr_operator new_declarator? | direct_new_declarator ;
         direct_new_declarator = '[' expression ']' | direct_new_declarator '[' constant_expression ']' ;
-        new_initializer = '(' expression_list? ')' ;
+        new_initializer = <' '*> '(' <' '*>  expression_list? <' '*>  ')'<' '*> ;
         delete_expression = COLONCOLON? DELETE cast_expression | COLONCOLON? DELETE '[' ']' cast_expression ;
         cast_expression = unary_expression | '(' type_id ')' cast_expression ;
         pm_expression = cast_expression | pm_expression DOTSTAR cast_expression | pm_expression ARROWSTAR cast_expression ;
@@ -105,7 +105,7 @@
         | CASE constant_expression ':' statement
         | DEFAULT ':' statement;
         expression_statement = expression? ';' ;
-        compound_statement = '{' statement_seq? '}' ;
+        compound_statement =  <'\n'*> <' '*> '{' <'\n'*> <' '*>  statement_seq?  <'\n'*> <' '*> '}'  <'\n'*> <' '*>;
         statement_seq = statement | statement_seq statement ;
         selection_statement = IF '(' condition ')' statement | IF '(' condition ')' statement ELSE statement | SWITCH '(' condition ')' statement ;
         condition= expression | type_specifier_seq declarator '=' assignment_expression ;
@@ -122,7 +122,7 @@
         | declaration_seq declaration
         ;
 
-        declaration=
+        <declaration>=
         block_declaration
         | function_definition
         | template_declaration
@@ -140,11 +140,11 @@
         | using_directive
         ;
 
-        simple_declaration=
+        <simple_declaration>=
         decl_specifier_seq? init_declarator_list? ';'
             ;
 
-        decl_specifier=
+        <decl_specifier>=
         storage_class_specifier
         | type_specifier
         | function_specifier
@@ -152,7 +152,7 @@
         | TYPEDEF
         ;
 
-        decl_specifier_seq=
+        <decl_specifier_seq>=
         decl_specifier_seq? decl_specifier
         ;
 
@@ -182,7 +182,7 @@
         | cv_qualifier
         ;
 
-        simple_type_specifier=
+        <simple_type_specifier>=
         COLONCOLON? nested_name_specifier? type_name
         | CHAR
         | WCHAR_T
@@ -295,10 +295,10 @@
           ;
 
           direct_declarator=
-          declarator_id
-          | direct_declarator '('parameter_declaration_clause ')' cv_qualifier_seq? exception_specification?
-                                 | direct_declarator '[' constant_expression? ']'
-              | '(' declarator ')'
+          <' '*> declarator_id <' '*>
+          | <' '*> direct_declarator '('parameter_declaration_clause ')' cv_qualifier_seq? exception_specification?
+                                 | direct_declarator '[' constant_expression? ']' <' '*>
+              | <' '*> '(' <' '*> declarator <' '*> ')' <' '*>
               ;
 
               ptr_operator=
@@ -358,12 +358,12 @@
                        ;
 
                        function_definition=
-                       decl_specifier_seq? declarator ctor_initializer? function_body
-                       | decl_specifier_seq? declarator function_try_block
+                       <'\n'*> <' '*> decl_specifier_seq? <'\n'*> <' '*> declarator ctor_initializer? <'\n'*> <' '*> function_body <'\n'*> <' '*>
+                       | <'\n'*> <' '*> decl_specifier_seq? <'\n'*> <' '*> declarator <'\n'*> <' '*>  function_try_block <'\n'*> <' '*>
                        ;
 
                        function_body=
-                       compound_statement
+                       <'\n'*> <' '*> compound_statement <'\n'*> <' '*>
                        ;
 
                        initializer=
@@ -374,7 +374,7 @@
                     initializer_clause=
                             assignment_expression
                             | '{' initializer_list COMMA? '}'
-                      | '{' '}'
+                      | '{' '}' | ' '
                                   ;
 
                                   initializer_list=
@@ -758,53 +758,60 @@
                           | type_id_list ',' type_id
                           ;
     "
-    )
-
-  )
-
+    ))
 
 (defn  init_cpp_grammar []
  (str
    cpp-declarations
    cpp-declarators
    cpp-statements
-                cpp-translation-unit
-                cpp-expressions
-                cpp-classes
-                cpp-derived-classes
-                cpp-special-member-functions
-                cpp-templates
-                cpp-overloading
-                cpp-exception-handling
-                lexical-cpp
-                keywords
+   cpp-translation-unit
+   cpp-expressions
+   cpp-classes
+   cpp-derived-classes
+   cpp-special-member-functions
+   cpp-templates
+   cpp-overloading
+   cpp-exception-handling
+   lexical-cpp
+   keywords
                 ))
 
 
 
 (def cpp-parser
-  (insta/parser (init_cpp_grammar)  ))
-
-(init_cpp_grammar )
-
-(cpp-parser " int a[23];")
-
-(cpp-parser " int a = new; int a; int  *b = calloc(10 );")
+  (insta/parser (init_cpp_grammar) :output-format :enlive))
 
 
+(cpp-parser "int a[23];")
 
+(cpp-parser " int a = new; int a; int  *b = calloc( 10 );")
 
-(defn  init_cpp_grammar2 []
-  (str
-    ; cpp-statements
-    ;cpp-expressions
-    ; cpp-declarations
-    ; cpp-declarators
-    lexical-cpp
-    keywords
-    ))
-
-(def cpp-parser
-  (insta/parser (init_cpp_grammar2)  ))
 
 (cpp-parser "int a ;")
+
+(def p (cpp-parser "int *ptr = new( l);"))
+
+((second p) :content)
+
+
+(cpp-parser "int *ptr = new( l );")
+
+(cpp-parser
+  "int function (int a , int b ){
+  int x ;
+  return x ;
+  }")
+
+(def t (cpp-parser
+         "int function (int a , int b ){
+         int x ;
+         return x ;
+         }"))
+
+
+(count ((first t) :content))
+
+((first t) :content)
+; need to fix this
+(cpp-parser "int a_1 = ' ';")
